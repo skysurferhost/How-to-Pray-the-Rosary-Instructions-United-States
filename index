@@ -53,11 +53,11 @@
 <body>
 
 <div id="controls">
-  <button onclick="prev()">◀</button>
+  <button onclick="prev()">?</button>
   <span id="page"></span>
-  <button onclick="next()">▶</button>
-  <button onclick="zoomOut()">−</button>
-  <button onclick="zoomIn()">＋</button>
+  <button onclick="next()">?</button>
+  <button onclick="zoomOut()">-</button>
+  <button onclick="zoomIn()">+</button>
 </div>
 
 <canvas id="pdf"></canvas>
