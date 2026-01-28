@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Rosary PDF Viewer</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
+<style>
+  body {
+    margin: 0;
+    background: #111;
+    font-family: system-ui, sans-serif;
+  }
+
+  #controls {
+    position: fixed;
+    top: 0;
+    width: 100%;
+    background: rgba(0,0,0,0.85);
+    color: #fff;
+    display: flex;
+    gap: 10px;
+    padding: 8px;
+    justify-content: center;
+    z-index: 10;
+  }
+
+  button {
+    background: rgba(255,255,255,0.15);
+    border: none;
+    color: #fff;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  canvas {
+    display: block;
+    margin: 60px auto 20px;
+    max-width: 100%;
+  }
+
+  @media (max-width: 768px) {
+    button {
+      font-size: 12px;
+      padding: 6px 8px;
+    }
+  }
+</style>
+</head>
+
+<body>
+
+<div id="controls">
+  <button onclick="prev()">◀</button>
+  <span id="page"></span>
+  <button onclick="next()">▶</button>
+  <button onclick="zoomOut()">−</button>
+  <button onclick="zoomIn()">＋</button>
+</div>
+
+<canvas id="pdf"></canvas>
+
+<script>
+const url = './How-to-Pray-the-Rosary-Instructions.pdf';
+
+let pdf, pageNum = 1, scale = 1.2;
+const canvas = document.getElementById('pdf');
+const ctx = canvas.getContext('2d');
+
+pdfjsLib.getDocument(url).promise.then(doc => {
+  pdf = doc;
+  render();
+});
+
+function render() {
+  pdf.getPage(pageNum).then(page => {
+    const viewport = page.getViewport({ scale });
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    page.render({ canvasContext: ctx, viewport });
+    document.getElementById('page').textContent =
+      `Page ${pageNum} / ${pdf.numPages}`;
+  });
+}
+
+function next() { if (pageNum < pdf.numPages) { pageNum++; render(); } }
+function prev() { if (pageNum > 1) { pageNum--; render(); } }
+function zoomIn() { scale += 0.2; render(); }
+function zoomOut() { scale = Math.max(0.6, scale - 0.2); render(); }
+</script>
+
+</body>
+</html>
