@@ -10,8 +10,8 @@
   html, body {
     margin: 0;
     padding: 0;
-    background: #111;
     height: 100%;
+    background: #111;
     overflow: hidden;
     font-family: Arial, sans-serif;
   }
@@ -40,27 +40,35 @@
     cursor: pointer;
   }
 
-  /* Viewer */
+  /* Viewer container */
   #viewer-container {
     position: absolute;
     top: 44px;
     bottom: 0;
     left: 0;
     right: 0;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
+    overflow: hidden; /* ⬅️ prevents bottom gap */
+    touch-action: none;
   }
 
+  /* Viewer */
   #viewer {
-    transform-origin: top center;
-    transition: transform 0.2s ease;
-    text-align: center;
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform-origin: top left;
+    cursor: grab;
+  }
+
+  #viewer.dragging {
+    cursor: grabbing;
   }
 
   canvas {
+    display: block;
     width: 100%;
     height: auto;
-    margin-bottom: 20px;
+    margin-bottom: 12px;
   }
 
   /* Mobile tweaks */
@@ -85,68 +93,3 @@
 
 <div class="toolbar">
   <button onclick="zoomOut()">−</button>
-  <button onclick="zoomIn()">+</button>
-  <button onclick="toggleFullscreen()">⤢ Fullscreen</button>
-</div>
-
-<div id="viewer-container">
-  <div id="viewer"></div>
-</div>
-
-<script>
-  const url = './How-to-Pray-the-Rosary-Instructions.pdf';
-
-  let pdfDoc = null;
-  let scale = 1;
-
-  pdfjsLib.getDocument(url).promise.then(pdf => {
-    pdfDoc = pdf;
-    renderPDF();
-  });
-
-  function renderPDF() {
-    const viewer = document.getElementById('viewer');
-    viewer.innerHTML = '';
-
-    for (let i = 1; i <= pdfDoc.numPages; i++) {
-      pdfDoc.getPage(i).then(page => {
-        const viewport = page.getViewport({ scale: 1 });
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-
-        page.render({ canvasContext: ctx, viewport });
-        viewer.appendChild(canvas);
-      });
-    }
-  }
-
-  function zoomIn() {
-    scale += 0.15;
-    applyZoom();
-  }
-
-  function zoomOut() {
-    scale = Math.max(0.6, scale - 0.15);
-    applyZoom();
-  }
-
-  function applyZoom() {
-    document.getElementById('viewer').style.transform =
-      `scale(${scale})`;
-  }
-
-  function toggleFullscreen() {
-    const elem = document.documentElement;
-    if (!document.fullscreenElement) {
-      elem.requestFullscreen();
-    } else {
-      document.exitFullscreen();
-    }
-  }
-</script>
-
-</body>
-</html>
