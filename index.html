@@ -134,11 +134,15 @@
   let pageNum = 1;
   let totalPages = 0;
 
-  /* 🔍 Default zoom */
-  let scale = window.innerWidth < 768 ? 0.25 : 0.4;
+  /* 🔍 Default zoom — more zoomed out on phones */
+  let scale = window.innerWidth < 768 ? 0.3 : 0.35;
+  let posX = 0;
+  let posY = 0;
+
+  /* 🎯 Smoothed transform targets */
   let targetScale = scale;
-  let targetX = 0;
-  let targetY = 0;
+  let targetX = posX;
+  let targetY = posY;
   let rafPending = false;
 
   const viewer = document.getElementById('viewer');
@@ -154,11 +158,7 @@
   function renderPage() {
     viewer.innerHTML = '';
     pdfDoc.getPage(pageNum).then(page => {
-
-      /* 📉 Smaller base render for performance */
-      const baseScale = window.innerWidth < 768 ? 0.8 : 1;
-      const viewport = page.getViewport({ scale: baseScale });
-
+      const viewport = page.getViewport({ scale: 1 });
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
 
@@ -177,13 +177,16 @@
     targetScale = scale;
     targetX = (container.clientWidth - viewer.clientWidth * scale) / 2;
     targetY = 20;
+    posX = targetX;
+    posY = targetY;
     applyTransform();
   }
 
+  /* 🧈 RAF-smoothed transform */
   function applyTransform() {
     if (rafPending) return;
-    rafPending = true;
 
+    rafPending = true;
     requestAnimationFrame(() => {
       viewer.style.transform =
         `translate(${targetX}px, ${targetY}px) scale(${targetScale})`;
@@ -202,9 +205,13 @@
     targetY -= dy * (targetScale / prevScale - 1);
 
     scale = targetScale;
+    posX = targetX;
+    posY = targetY;
+
     applyTransform();
   }
 
+  /* 🔘 Buttons */
   function zoomIn() {
     zoomAtPoint(0.2, container.clientWidth / 2, container.clientHeight / 2);
   }
@@ -235,10 +242,9 @@
     }
   }
 
-  /* 🖐 PAN (THROTTLED) */
+  /* 🖐 PAN / DRAG */
   let dragging = false;
   let startX, startY;
-  let lastMove = 0;
 
   container.addEventListener('pointerdown', e => {
     dragging = true;
@@ -249,12 +255,10 @@
 
   window.addEventListener('pointermove', e => {
     if (!dragging) return;
-    const now = performance.now();
-    if (now - lastMove < 16) return;
-    lastMove = now;
-
     targetX = e.clientX - startX;
     targetY = e.clientY - startY;
+    posX = targetX;
+    posY = targetY;
     applyTransform();
   });
 
@@ -263,10 +267,64 @@
     viewer.classList.remove('dragging');
   });
 
+  /* 🖱 Desktop scroll zoom */
   container.addEventListener('wheel', e => {
     e.preventDefault();
-    zoomAtPoint(e.deltaY < 0 ? 0.15 : -0.15, e.offsetX, e.offsetY);
+    const delta = e.deltaY < 0 ? 0.12 : -0.12;
+    zoomAtPoint(delta, e.offsetX, e.offsetY);
   }, { passive: false });
+
+  /* 🤏 Mobile pinch zoom (stable) */
+  let lastDistance = null;
+
+  container.addEventListener('touchstart', e => {
+    if (e.touches.length === 2) {
+      lastDistance = getDistance(e.touches[0], e.touches[1]);
+    }
+  }, { passive: false });
+
+  container.addEventListener('touchmove', e => {
+    if (e.touches.length === 2 && lastDistance !== null) {
+      e.preventDefault();
+
+      const currentDistance = getDistance(e.touches[0], e.touches[1]);
+      const delta = (currentDistance - lastDistance) * 0.0018;
+
+      const rect = container.getBoundingClientRect();
+      const centerX =
+        (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
+      const centerY =
+        (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top;
+
+      zoomAtPoint(delta, centerX, centerY);
+      lastDistance = currentDistance;
+    }
+  }, { passive: false });
+
+  container.addEventListener('touchend', () => {
+    lastDistance = null;
+  });
+
+  function getDistance(t1, t2) {
+    return Math.hypot(
+      t2.clientX - t1.clientX,
+      t2.clientY - t1.clientY
+    );
+  }
+
+  /* 👆 Double tap zoom */
+  let lastTap = 0;
+  container.addEventListener('click', () => {
+    const now = Date.now();
+    if (now - lastTap < 300) {
+      zoomAtPoint(
+        scale > 1 ? -scale + 0.85 : 0.7,
+        container.clientWidth / 2,
+        container.clientHeight / 2
+      );
+    }
+    lastTap = now;
+  });
 </script>
 
 </body>
