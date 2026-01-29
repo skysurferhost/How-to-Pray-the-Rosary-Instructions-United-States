@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Rosary PDF Viewer</title>
+<title>Rosary PDF Viewer United States</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
@@ -133,9 +133,16 @@
   let pageNum = 1;
   let totalPages = 0;
 
-  let scale = 0.35; // ⬅️ default zoomed OUT
+  /* 🔍 Default zoom — more zoomed out on phones */
+  let scale = window.innerWidth < 768 ? 0.3 : 0.35;
   let posX = 0;
   let posY = 0;
+
+  /* 🎯 Smoothed transform targets */
+  let targetScale = scale;
+  let targetX = posX;
+  let targetY = posY;
+  let rafPending = false;
 
   const viewer = document.getElementById('viewer');
   const container = document.getElementById('viewer-container');
@@ -166,30 +173,44 @@
   }
 
   function resetTransform() {
-    posX = (container.clientWidth - viewer.clientWidth * scale) / 2;
-    posY = 20;
+    targetScale = scale;
+    targetX = (container.clientWidth - viewer.clientWidth * scale) / 2;
+    targetY = 20;
+    posX = targetX;
+    posY = targetY;
     applyTransform();
   }
 
+  /* 🧈 RAF-smoothed transform */
   function applyTransform() {
-    viewer.style.transform =
-      `translate(${posX}px, ${posY}px) scale(${scale})`;
+    if (rafPending) return;
+
+    rafPending = true;
+    requestAnimationFrame(() => {
+      viewer.style.transform =
+        `translate(${targetX}px, ${targetY}px) scale(${targetScale})`;
+      rafPending = false;
+    });
   }
 
   function zoomAtPoint(delta, cx, cy) {
-    const prevScale = scale;
-    scale = Math.min(Math.max(0.5, scale + delta), 4);
+    const prevScale = targetScale;
+    targetScale = Math.min(Math.max(0.25, targetScale + delta), 4);
 
-    const dx = cx - posX;
-    const dy = cy - posY;
+    const dx = cx - targetX;
+    const dy = cy - targetY;
 
-    posX -= dx * (scale / prevScale - 1);
-    posY -= dy * (scale / prevScale - 1);
+    targetX -= dx * (targetScale / prevScale - 1);
+    targetY -= dy * (targetScale / prevScale - 1);
+
+    scale = targetScale;
+    posX = targetX;
+    posY = targetY;
 
     applyTransform();
   }
 
-  /* Buttons */
+  /* 🔘 Buttons */
   function zoomIn() {
     zoomAtPoint(0.2, container.clientWidth / 2, container.clientHeight / 2);
   }
@@ -220,39 +241,39 @@
     }
   }
 
-  /* ------------------------
-     DRAG / PAN (ALL DEVICES)
-  ------------------------- */
+  /* 🖐 PAN / DRAG */
   let dragging = false;
   let startX, startY;
 
   container.addEventListener('pointerdown', e => {
     dragging = true;
-    startX = e.clientX - posX;
-    startY = e.clientY - posY;
+    viewer.classList.add('dragging');
+    startX = e.clientX - targetX;
+    startY = e.clientY - targetY;
   });
 
   window.addEventListener('pointermove', e => {
     if (!dragging) return;
-    posX = e.clientX - startX;
-    posY = e.clientY - startY;
+    targetX = e.clientX - startX;
+    targetY = e.clientY - startY;
+    posX = targetX;
+    posY = targetY;
     applyTransform();
   });
 
-  window.addEventListener('pointerup', () => dragging = false);
+  window.addEventListener('pointerup', () => {
+    dragging = false;
+    viewer.classList.remove('dragging');
+  });
 
-  /* ------------------------
-     DESKTOP WHEEL ZOOM
-  ------------------------- */
+  /* 🖱 Desktop scroll zoom */
   container.addEventListener('wheel', e => {
     e.preventDefault();
-    const delta = e.deltaY < 0 ? 0.15 : -0.15;
+    const delta = e.deltaY < 0 ? 0.12 : -0.12;
     zoomAtPoint(delta, e.offsetX, e.offsetY);
   }, { passive: false });
 
-  /* ------------------------
-     MOBILE PINCH ZOOM (FIX)
-  ------------------------- */
+  /* 🤏 Mobile pinch zoom (stable) */
   let lastDistance = null;
 
   container.addEventListener('touchstart', e => {
@@ -266,15 +287,13 @@
       e.preventDefault();
 
       const currentDistance = getDistance(e.touches[0], e.touches[1]);
-      const delta = (currentDistance - lastDistance) * 0.002;
+      const delta = (currentDistance - lastDistance) * 0.0018;
 
+      const rect = container.getBoundingClientRect();
       const centerX =
-        (e.touches[0].clientX + e.touches[1].clientX) / 2 -
-        container.getBoundingClientRect().left;
-
+        (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
       const centerY =
-        (e.touches[0].clientY + e.touches[1].clientY) / 2 -
-        container.getBoundingClientRect().top;
+        (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top;
 
       zoomAtPoint(delta, centerX, centerY);
       lastDistance = currentDistance;
@@ -292,15 +311,13 @@
     );
   }
 
-  /* ------------------------
-     DOUBLE TAP ZOOM
-  ------------------------- */
+  /* 👆 Double tap zoom */
   let lastTap = 0;
   container.addEventListener('click', () => {
     const now = Date.now();
     if (now - lastTap < 300) {
       zoomAtPoint(
-        scale > 1.2 ? -scale + 0.85 : 0.8,
+        scale > 1 ? -scale + 0.85 : 0.7,
         container.clientWidth / 2,
         container.clientHeight / 2
       );
