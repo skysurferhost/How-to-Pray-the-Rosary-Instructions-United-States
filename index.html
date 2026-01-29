@@ -40,23 +40,21 @@
     cursor: pointer;
   }
 
-  /* Viewer container */
   #viewer-container {
     position: absolute;
     top: 44px;
     bottom: 0;
     left: 0;
     right: 0;
-    overflow: hidden; /* ⬅️ prevents bottom gap */
-    touch-action: none;
+    overflow: hidden;
+    touch-action: none; /* required for pinch */
   }
 
-  /* Viewer */
   #viewer {
     position: absolute;
     top: 0;
     left: 0;
-    transform-origin: top left;
+    transform-origin: 0 0;
     cursor: grab;
   }
 
@@ -71,17 +69,14 @@
     margin-bottom: 12px;
   }
 
-  /* Mobile tweaks */
   @media (max-width: 768px) {
     .toolbar {
       height: 50px;
     }
-
     .toolbar button {
       font-size: 16px;
       padding: 8px 14px;
     }
-
     #viewer-container {
       top: 50px;
     }
@@ -118,77 +113,4 @@
   });
 
   function renderPDF() {
-    viewer.innerHTML = '';
-
-    for (let i = 1; i <= pdfDoc.numPages; i++) {
-      pdfDoc.getPage(i).then(page => {
-        const viewport = page.getViewport({ scale: 1 });
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-
-        page.render({ canvasContext: ctx, viewport });
-        viewer.appendChild(canvas);
-      });
-    }
-
-    resetPosition();
-  }
-
-  function applyTransform() {
-    viewer.style.transform =
-      `translate(${posX}px, ${posY}px) scale(${scale})`;
-  }
-
-  function resetPosition() {
-    posX = 0;
-    posY = 0;
-    applyTransform();
-  }
-
-  function zoomIn() {
-    scale += 0.15;
-    applyTransform();
-  }
-
-  function zoomOut() {
-    scale = Math.max(0.6, scale - 0.15);
-    applyTransform();
-  }
-
-  function toggleFullscreen() {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen();
-    } else {
-      document.exitFullscreen();
-    }
-  }
-
-  /* 🖱️ Drag / Pan support */
-  let isDragging = false;
-  let startX, startY;
-
-  container.addEventListener('pointerdown', e => {
-    isDragging = true;
-    viewer.classList.add('dragging');
-    startX = e.clientX - posX;
-    startY = e.clientY - posY;
-  });
-
-  window.addEventListener('pointermove', e => {
-    if (!isDragging) return;
-    posX = e.clientX - startX;
-    posY = e.clientY - startY;
-    applyTransform();
-  });
-
-  window.addEventListener('pointerup', () => {
-    isDragging = false;
-    viewer.classList.remove('dragging');
-  });
-</script>
-
-</body>
-</html>
+    viewer.innerHTML =
